@@ -31,6 +31,10 @@ buildPythonPackage rec {
     pytest-asyncio
   ];
 
+  patches = lib.optionals stdenv.isDarwin [
+    ./patches/remove-sock-nonblock.patch
+  ];
+
   disabledTests = lib.optionals stdenv.isDarwin [
     "test_multiprocessing"
   ];
