@@ -1,4 +1,4 @@
-{ rustPlatform, fetchFromGitHub, lib, python, cmake, llvmPackages, clang, stdenv, darwin }:
+{ rustPlatform, fetchFromGitHub, lib, python, cmake, llvmPackages, clang, stdenv, darwin, v8 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "wasmtime";
@@ -14,14 +14,15 @@ rustPlatform.buildRustPackage rec {
 
   cargoSha256 = "sha256-IXrE1XVZUnyCbOcC0eEZKtI97YRA9Nap3u4tqcbEKf8";
 
-  nativeBuildInputs = [ python cmake clang ];
-  buildInputs = [ llvmPackages.libclang ] ++
-   lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Security ];
-  LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
+  # This environment variable is required so that when wasmtime tries
+  # to run tests by using the rusty_v8 crate, it does not try to
+  # download a static v8 build from the Internet, what would break
+  # build hermetism.
+  RUSTY_V8_ARCHIVE = "${v8}/lib/libv8.a";
 
-  configurePhase = ''
-    export HOME=$TMP;
-  '';
+  patches = [
+    ./patches/remove-failing-test.patch
+  ];
 
   doCheck = true;
 
