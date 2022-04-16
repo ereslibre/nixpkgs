@@ -87,8 +87,7 @@ python3.pkgs.buildPythonApplication rec {
       manages Xen and LXC (linux containers).
     '';
     license = licenses.gpl2;
-    # exclude Darwin since libvirt-glib currently doesn't build there
-    platforms = platforms.linux;
+    platforms = platforms.unix;
     maintainers = with maintainers; [ qknight offline fpletz globin ];
   };
 }

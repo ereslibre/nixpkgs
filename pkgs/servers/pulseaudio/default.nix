@@ -8,17 +8,17 @@
 
 , x11Support ? false
 
-, useSystemd ? true
+, useSystemd ? false
 
 , # Whether to support the JACK sound system as a backend.
   jackaudioSupport ? false
 
 , # Whether to build the OSS wrapper ("padsp").
-  ossWrapper ? true
+  ossWrapper ? false
 
 , airtunesSupport ? false
 
-, bluetoothSupport ? true
+, bluetoothSupport ? false
 
 , remoteControlSupport ? false
 
@@ -32,11 +32,11 @@
 
 stdenv.mkDerivation rec {
   pname = "${if libOnly then "lib" else ""}pulseaudio";
-  version = "15.0";
+  version = "15.99.1";
 
   src = fetchurl {
     url = "http://freedesktop.org/software/pulseaudio/releases/pulseaudio-${version}.tar.xz";
-    sha256 = "pAuIejupjMJpdusRvbZhOYjxRbGQJNG2VVxqA8nLoaA=";
+    sha256 = "Y6nWvC24f/U9ZCUSW7qJrn5NFHmq7VWcUobwCpc27eY=";
   };
 
   patches = [
@@ -47,15 +47,14 @@ stdenv.mkDerivation rec {
 
   outputs = [ "out" "dev" ];
 
-  nativeBuildInputs = [ pkg-config meson ninja makeWrapper perlPackages.perl perlPackages.XMLParser m4 ]
-    ++ lib.optionals stdenv.isLinux [ glib ];
+  nativeBuildInputs = [ glib pkg-config meson ninja makeWrapper perlPackages.perl perlPackages.XMLParser m4 ];
 
   propagatedBuildInputs =
     lib.optionals stdenv.isLinux [ libcap ];
 
   buildInputs =
-    [ libtool libsndfile soxr speexdsp fftwFloat check ]
-    ++ lib.optionals stdenv.isLinux [ glib dbus ]
+    [ glib libtool libsndfile soxr speexdsp fftwFloat check ]
+    ++ lib.optionals stdenv.isLinux [ dbus ]
     ++ lib.optionals stdenv.isDarwin [ AudioUnit Cocoa CoreServices libintl ]
     ++ lib.optionals (!libOnly) (
       [ libasyncns webrtc-audio-processing ]
@@ -70,16 +69,17 @@ stdenv.mkDerivation rec {
   );
 
   mesonFlags = [
-    "-Dalsa=${if !libOnly then "enabled" else "disabled"}"
+    "-Dalsa=${if stdenv.isLinux && !libOnly then "enabled" else "disabled"}"
     "-Dasyncns=${if !libOnly then "enabled" else "disabled"}"
     "-Davahi=${if zeroconfSupport then "enabled" else "disabled"}"
-    "-Dbluez5=${if !libOnly then "enabled" else "disabled"}"
+    "-Dbluez5=${if stdenv.isLinux && !libOnly then "enabled" else "disabled"}"
     "-Dbluez5-gstreamer=disabled"
     "-Ddatabase=simple"
+    "-Ddbus=${if stdenv.isLinux then "enabled" else "disabled"}"
     "-Ddoxygen=false"
     "-Delogind=disabled"
     # gsettings does not support cross-compilation
-    "-Dgsettings=${if stdenv.buildPlatform == stdenv.hostPlatform then "enabled" else "disabled"}"
+    "-Dgsettings=disabled"
     "-Dgstreamer=disabled"
     "-Dgtk=disabled"
     "-Djack=${if jackaudioSupport && !libOnly then "enabled" else "disabled"}"
@@ -94,8 +94,10 @@ stdenv.mkDerivation rec {
     "-Dx11=${if x11Support then "enabled" else "disabled"}"
 
     "-Dlocalstatedir=/var"
+    "-Doss-output=disabled"
     "-Dsysconfdir=/etc"
     "-Dsysconfdir_install=${placeholder "out"}/etc"
+    "-Dudev=disabled"
     "-Dudevrulesdir=${placeholder "out"}/lib/udev/rules.d"
   ]
     ++ lib.optional (stdenv.isLinux && useSystemd) "-Dsystemduserunitdir=${placeholder "out"}/lib/systemd/user"
