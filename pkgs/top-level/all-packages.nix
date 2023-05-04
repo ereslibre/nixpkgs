@@ -37580,6 +37580,8 @@ with pkgs;
 
   wacomtablet = libsForQt5.callPackage ../tools/misc/wacomtablet { };
 
+  wamr = callPackage ../development/interpreters/wamr { };
+
   wasmer = callPackage ../development/interpreters/wasmer { };
 
   yabasic = callPackage ../development/interpreters/yabasic { };
