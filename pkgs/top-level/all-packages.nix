@@ -15020,6 +15020,8 @@ with pkgs;
 
   wvkbd = callPackage ../applications/accessibility/wvkbd { };
 
+  wws = callPackage ../development/tools/wws { };
+
   wyrd = callPackage ../tools/misc/wyrd {
     ocamlPackages = ocaml-ng.ocamlPackages_4_14_unsafe_string;
   };
