@@ -218,11 +218,13 @@ let
         inherit lockFile;
       };
     }) ''
+    set -x
+
     mkdir -p $out/.cargo
 
     ${
       if lockFile != null
-      then "ln -s ${lockFile} $out/Cargo.lock"
+      then "ln -sf ${lockFile} $out/Cargo.lock"
       else "cp $lockFileContentsPath $out/Cargo.lock"
     }
 
@@ -247,7 +249,7 @@ EOF
 
     for crate in ${toString depCrates}; do
       # Link the crate directory, removing the output path hash from the destination.
-      ln -s "$crate" $out/$(basename "$crate" | cut -c 34-)
+      ln -s "$crate" $out/$(basename "$crate")
 
       if [ -e "$crate/.cargo-config" ]; then
         key=$(sed 's/\[source\."\(.*\)"\]/\1/; t; d' < "$crate/.cargo-config")
