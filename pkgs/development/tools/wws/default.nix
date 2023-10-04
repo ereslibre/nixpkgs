@@ -18,11 +18,11 @@ rustPlatform.buildRustPackage rec {
 
   cargoLock = {
     lockFile = ./Cargo.lock;
-    allowBuiltinFetchGit = true;
-    # outputHashes = {
-    #   "wax-0.5.0" = lib.fakeSha256;
-    #   "wit-bindgen-gen-core-0.2.0" = lib.fakeSha256;
-    # };
+    allowBuiltinFetchGit = false;
+    outputHashes = {
+      "wax-0.5.0" = lib.fakeSha256;
+      "wit-bindgen-gen-core-0.2.0" = lib.fakeSha256;
+    };
   };
 
   postPatch = ''

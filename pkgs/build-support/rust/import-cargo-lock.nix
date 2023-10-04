@@ -249,6 +249,10 @@ EOF
 
     for crate in ${toString depCrates}; do
       # Link the crate directory, removing the output path hash from the destination.
+      echo "crate: $crate"
+      echo "target: $out/$(basename $crate)"
+      echo "cut target: $out/$(basename $crate | cut -c 34-)"
+
       ln -s "$crate" $out/$(basename "$crate")
 
       if [ -e "$crate/.cargo-config" ]; then
