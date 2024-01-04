@@ -10,6 +10,7 @@
 , configTemplate
 , configTemplatePath ? null
 , libnvidia-container
+, cudaPackages
 }:
 
 assert configTemplate != null -> (lib.isAttrs configTemplate && configTemplatePath == null);
@@ -34,26 +35,41 @@ let
 in
 buildGoModule rec {
   pname = "container-toolkit/container-toolkit";
-  version = "1.9.0";
+  version = "1.15.0-rc.1";
 
   src = fetchFromGitLab {
     owner = "nvidia";
     repo = pname;
     rev = "v${version}";
-    hash = "sha256-b4mybNB5FqizFTraByHk5SCsNO66JaISj18nLgLN7IA=";
+    hash = "sha256-tbud1Yv+9nOGrc0ayW8uHbavUXXF5qx43oSTZci6Iys=";
   };
 
   vendorHash = null;
 
   postPatch = ''
-    # replace the default hookDefaultFilePath to the $out path
-    substituteInPlace cmd/nvidia-container-runtime/main.go \
-      --replace '/usr/bin/nvidia-container-runtime-hook' '${placeholder "out"}/bin/nvidia-container-runtime-hook'
+    # Replace the default hookDefaultFilePath to the $out path and override
+    # default ldconfig locations to the one in nixpkgs.
+
+    substituteInPlace internal/config/config.go \
+      --replace '/usr/bin/nvidia-container-runtime-hook' '${placeholder "out"}/bin/nvidia-container-runtime-hook' \
+      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
+
+    substituteInPlace internal/config/config_test.go \
+      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
+
+    substituteInPlace tools/container/toolkit/toolkit.go \
+      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
+
+    substituteInPlace cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go \
+      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
   '';
 
-  ldflags = [ "-s" "-w" ];
+  ldflags = [ "-extldflags=-Wl,-z,lazy" "-s" "-w" ];
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [
+    cudaPackages.autoAddOpenGLRunpathHook
+    makeWrapper
+  ];
 
   preConfigure = ''
     # Ensure the runc symlink isn't broken:
@@ -95,7 +111,7 @@ buildGoModule rec {
     substituteInPlace $out/etc/nvidia-container-runtime/config.toml \
       --subst-var-by glibcbin ${lib.getBin glibc}
 
-    ln -s $out/bin/nvidia-container-{toolkit,runtime-hook}
+    ln -s $out/bin/nvidia-container-runtime-hook $out/bin/nvidia-container-toolkit
 
     wrapProgram $out/bin/nvidia-container-toolkit \
       --add-flags "-config ${placeholder "out"}/etc/nvidia-container-runtime/config.toml"
