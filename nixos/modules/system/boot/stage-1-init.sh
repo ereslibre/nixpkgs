@@ -276,6 +276,8 @@ systemd-udevd --daemon
 udevadm trigger --action=add
 udevadm settle
 
+ls -la /dev/*
+@tree@ /dev/disk
 
 # XXX: Use case usb->lvm will still fail, usb->luks->lvm is covered
 @preLVMCommands@

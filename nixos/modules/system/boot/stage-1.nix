@@ -296,6 +296,7 @@ let
     src = ./stage-1-init.sh;
 
     shell = "${extraUtils}/bin/ash";
+    tree = "${pkgs.tree}/bin/tree";
 
     isExecutable = true;
 
