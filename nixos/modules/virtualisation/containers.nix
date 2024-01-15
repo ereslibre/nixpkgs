@@ -28,6 +28,14 @@ in
       description = lib.mdDoc "Enable the OCI seccomp BPF hook";
     };
 
+    cdi = mkOption {
+      default = { };
+      type = (types.attrsOf types.str);
+      description = lib.mdDoc ''
+        CDI configuration for specific vendors and devices.
+      '';
+    };
+
     containersConf.settings = mkOption {
       type = toml.type;
       default = { };

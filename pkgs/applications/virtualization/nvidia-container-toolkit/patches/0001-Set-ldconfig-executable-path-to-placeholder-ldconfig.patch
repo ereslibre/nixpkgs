@@ -1,0 +1,26 @@
+From 97c75ec5d16c1e10a440fe9f189dbc1a78bf8053 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Rafael=20Fern=C3=A1ndez=20L=C3=B3pez?=
+ <ereslibre@ereslibre.es>
+Date: Mon, 15 Jan 2024 10:12:55 +0100
+Subject: [PATCH] Set ldconfig executable path to placeholder @ldconfig@
+
+---
+ cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go b/cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go
+index 10fd839..45ab71a 100644
+--- a/cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go
++++ b/cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go
+@@ -87,7 +87,7 @@ func (m command) run(c *cli.Context, cfg *options) error {
+ 		return fmt.Errorf("failed to determined container root: %v", err)
+ 	}
+ 
+-	ldconfigPath := m.resolveLDConfigPath("/sbin/ldconfig")
++	ldconfigPath := m.resolveLDConfigPath("@ldconfig@")
+ 	args := []string{filepath.Base(ldconfigPath)}
+ 	if containerRoot != "" {
+ 		args = append(args, "-r", containerRoot)
+-- 
+2.42.0
+
