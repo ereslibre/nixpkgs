@@ -1,7 +1,7 @@
 { lib
 , stdenv
 , glibc
-, fetchFromGitLab
+, fetchFromGitHub
 , makeWrapper
 , buildGoModule
 , linkFarm
@@ -35,14 +35,14 @@ let
   configToml = if configTemplatePath != null then configTemplatePath else (formats.toml { }).generate "config.toml" configTemplate;
 in
 buildGoModule rec {
-  pname = "container-toolkit/container-toolkit";
+  pname = "nvidia-container-toolkit";
   version = "1.15.0-rc.1";
 
-  src = fetchFromGitLab {
-    owner = "nvidia";
+  src = fetchFromGitHub {
+    owner = "ereslibre";
     repo = pname;
-    rev = "v${version}";
-    hash = "sha256-tbud1Yv+9nOGrc0ayW8uHbavUXXF5qx43oSTZci6Iys=";
+    rev = "5c2d576e0f754ec102c7d41392152f65beb00d64";
+    hash = "sha256-8Wie9d0NhzCcazp7TkExQEuohICjnNn/mJ51qphqerE=";
   };
 
   vendorHash = null;
