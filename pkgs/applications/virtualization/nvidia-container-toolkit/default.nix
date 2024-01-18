@@ -46,24 +46,6 @@ buildGoModule rec {
 
   vendorHash = null;
 
-  postPatch = ''
-    # Replace the default hookDefaultFilePath to the $out path and override
-    # default ldconfig locations to the one in nixpkgs.
-
-    substituteInPlace internal/config/config.go \
-      --replace '/usr/bin/nvidia-container-runtime-hook' '${placeholder "out"}/bin/nvidia-container-runtime-hook' \
-      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
-
-    substituteInPlace internal/config/config_test.go \
-      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
-
-    substituteInPlace tools/container/toolkit/toolkit.go \
-      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
-
-    substituteInPlace cmd/nvidia-ctk/hook/update-ldcache/update-ldcache.go \
-      --replace '/sbin/ldconfig' '${lib.getBin glibc}/sbin/ldconfig'
-  '';
-
   ldflags = [ "-extldflags=-Wl,-z,lazy" "-s" "-w" ];
 
   nativeBuildInputs = [

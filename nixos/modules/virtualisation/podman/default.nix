@@ -174,11 +174,6 @@ in
         enable = true; # Enable common /etc/containers configuration
         containersConf.settings = {
           network.network_backend = "netavark";
-        } // lib.optionalAttrs cfg.enableNvidia {
-          engine = {
-            conmon_env_vars = [ "PATH=${lib.makeBinPath [ pkgs.nvidia-podman ]}" ];
-            runtimes.nvidia = [ "${pkgs.nvidia-podman}/bin/nvidia-container-runtime" ];
-          };
         };
       };
 
