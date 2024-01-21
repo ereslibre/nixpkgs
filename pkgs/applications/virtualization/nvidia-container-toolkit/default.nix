@@ -38,10 +38,10 @@ buildGoModule rec {
   version = "1.15.0-rc.1";
 
   src = fetchFromGitLab {
-    owner = "nvidia";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-tbud1Yv+9nOGrc0ayW8uHbavUXXF5qx43oSTZci6Iys=";
+    owner = "jmbaur";
+    repo = "container-toolkit";
+    rev = "ldconfig-path";
+    hash = "sha256-tGZB3gj4OQtxKOqSVvuZo33iVPW5BtvMLir+Ixr1bq0=";
   };
 
   vendorHash = null;
