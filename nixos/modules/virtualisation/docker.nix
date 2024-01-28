@@ -170,8 +170,10 @@ in
         "net.ipv4.conf.all.forwarding" = mkOverride 98 true;
         "net.ipv4.conf.default.forwarding" = mkOverride 98 true;
       };
-      environment.systemPackages = [ cfg.package ]
-        ++ optional cfg.enableNvidia pkgs.nvidia-docker;
+      environment.systemPackages = [ cfg.package ];
+      # Docker implements CDI support with 25.0.0 (https://docs.docker.com/engine/release-notes/25.0/#2500)
+      hardware.nvidia-container-toolkit.enable = lib.mkIf
+        (cfg.enableNvidia && (lib.versionAtLeast cfg.package.version "25")) true;
       users.groups.docker.gid = config.ids.gids.docker;
       systemd.packages = [ cfg.package ];
 
