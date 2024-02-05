@@ -55,10 +55,6 @@ in
 , cowsay
 , hello
   # Overridable configurations
-, enableNvidiaContainerCli ? true
-  # --nvccli currently requires extra privileges:
-  # https://github.com/apptainer/apptainer/issues/1893#issuecomment-1881240800
-, forceNvcCli ? false
   # Compile with seccomp support
   # SingularityCE 3.10.0 and above requires explicit --without-seccomp when libseccomp is not available.
 , enableSeccomp ? true
@@ -147,7 +143,6 @@ in
     openssl
     squashfsTools # Required at build time by SingularityCE
   ]
-  ++ lib.optional enableNvidiaContainerCli nvidia-docker
   ++ lib.optional enableSeccomp libseccomp
   ;
 
@@ -177,9 +172,7 @@ in
     privileged-un-utils
     squashfsTools # mksquashfs unsquashfs # Make / unpack squashfs image
     squashfuse # squashfuse_ll squashfuse # Mount (without unpacking) a squashfs image without privileges
-  ]
-  ++ lib.optional enableNvidiaContainerCli nvidia-docker
-  ;
+  ];
 
   postPatch = ''
     if [[ ! -e .git || ! -e VERSION ]]; then
@@ -229,14 +222,6 @@ in
     wrapProgram "$out/bin/${projectName}" \
       --prefix PATH : "''${defaultPathInputs// /\/bin:}''${defaultPathInputs:+/bin:}"
     # Make changes in the config file
-    ${lib.optionalString forceNvcCli ''
-      substituteInPlace "$out/etc/${projectName}/${projectName}.conf" \
-        --replace "use nvidia-container-cli = no" "use nvidia-container-cli = yes"
-    ''}
-    ${lib.optionalString (enableNvidiaContainerCli && projectName == "singularity") ''
-      substituteInPlace "$out/etc/${projectName}/${projectName}.conf" \
-        --replace "# nvidia-container-cli path =" "nvidia-container-cli path = ${nvidia-docker}/bin/nvidia-container-cli"
-    ''}
     ${lib.optionalString (removeCompat && (projectName != "singularity")) ''
       unlink "$out/bin/singularity"
       for file in "$out"/share/man/man?/singularity*.gz; do

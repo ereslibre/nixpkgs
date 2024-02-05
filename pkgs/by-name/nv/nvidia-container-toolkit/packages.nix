@@ -29,31 +29,9 @@ lib.makeScope newScope (
         ldconfig = "@@glibcbin@/bin/ldconfig";
       };
     };
-    nvidia-container-toolkit-docker = self.callPackage ./. {
+    nvidia-container-toolkit-docker = self.callPackage ./package.nix {
       containerRuntimePath = "${docker}/libexec/docker/docker";
       configTemplate = self.dockerConfig;
-    };
-
-    podmanConfig = {
-      disable-require = true;
-      #swarm-resource = "DOCKER_RESOURCE_GPU";
-
-      nvidia-container-cli = {
-        #root = "/run/nvidia/driver";
-        #path = "/usr/bin/nvidia-container-cli";
-        environment = [ ];
-        #debug = "/var/log/nvidia-container-runtime-hook.log";
-        ldcache = "/tmp/ld.so.cache";
-        load-kmods = true;
-        no-cgroups = true;
-        #user = "root:video";
-        ldconfig = "@@glibcbin@/bin/ldconfig";
-      };
-    };
-    nvidia-container-toolkit-podman = self.nvidia-container-toolkit-docker.override {
-      containerRuntimePath = lib.getExe runc;
-
-      configTemplate = self.podmanConfig;
     };
 
     nvidia-docker = symlinkJoin {
@@ -65,15 +43,6 @@ lib.makeScope newScope (
       ];
       inherit (self.nvidia-docker-unwrapped) meta;
     };
-    nvidia-docker-unwrapped = self.callPackage ../nvidia-docker { };
-
-    nvidia-podman = symlinkJoin {
-      name = "nvidia-podman";
-      paths = [
-        libnvidia-container
-        self.nvidia-container-toolkit-podman
-      ];
-      inherit (self.nvidia-container-toolkit-podman) meta;
-    };
+    nvidia-docker-unwrapped = self.callPackage ./nvidia-docker.nix { };
   }
 )

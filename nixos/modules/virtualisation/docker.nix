@@ -72,7 +72,7 @@ in
         type = types.bool;
         default = false;
         description = lib.mdDoc ''
-          Enable nvidia-docker wrapper, supporting NVIDIA GPUs inside docker containers.
+          Enable CDI for Docker 25 and onwards, and the nvidia-docker wrapper otherwise, supporting NVIDIA GPUs inside docker containers.
         '';
       };
 
@@ -171,11 +171,11 @@ in
         "net.ipv4.conf.default.forwarding" = mkOverride 98 true;
       };
       environment.systemPackages = [ cfg.package ];
-      # Docker implements CDI support with 25.0.0 (https://docs.docker.com/engine/release-notes/25.0/#2500)
-      hardware.nvidia-container-toolkit.enable = lib.mkIf
-        (cfg.enableNvidia && (lib.versionAtLeast cfg.package.version "25")) true;
       users.groups.docker.gid = config.ids.gids.docker;
       systemd.packages = [ cfg.package ];
+
+      virtualisation.containers.cdi.dynamic.nvidia.enable = mkIf
+        (cfg.enableNvidia && cfg.package.supports-cdi) true;
 
       systemd.services.docker = {
         wantedBy = optional cfg.enableOnBoot "multi-user.target";
@@ -198,7 +198,7 @@ in
         };
 
         path = [ pkgs.kmod ] ++ optional (cfg.storageDriver == "zfs") pkgs.zfs
-          ++ optional cfg.enableNvidia pkgs.nvidia-docker
+          ++ optional (cfg.enableNvidia && !cfg.package.supports-cdi) pkgs.nvidia-docker
           ++ cfg.extraPackages;
       };
 
@@ -231,7 +231,7 @@ in
       };
 
       assertions = [
-        { assertion = cfg.enableNvidia && pkgs.stdenv.isx86_64 -> config.hardware.opengl.driSupport32Bit or false;
+        { assertion = cfg.enableNvidia && pkgs.stdenv.isx86_64 && !cfg.package.supports-cdi -> config.hardware.opengl.driSupport32Bit or false;
           message = "Option enableNvidia on x86_64 requires 32bit support libraries";
         }];
 
@@ -241,7 +241,7 @@ in
         log-driver = mkDefault cfg.logDriver;
         storage-driver = mkIf (cfg.storageDriver != null) (mkDefault cfg.storageDriver);
         live-restore = mkDefault cfg.liveRestore;
-        runtimes = mkIf cfg.enableNvidia {
+        runtimes = mkIf (cfg.enableNvidia && !cfg.package.supports-cdi) {
           nvidia = {
             path = "${pkgs.nvidia-docker}/bin/nvidia-container-runtime";
           };

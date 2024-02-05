@@ -250,6 +250,8 @@ rec {
       # Exposed for tarsum build on non-linux systems (build-support/docker/default.nix)
       inherit moby-src;
       tests = lib.optionals (!clientOnly) { inherit (nixosTests) docker; };
+      # Docker implements CDI support since 25.0.0 (https://docs.docker.com/engine/release-notes/25.0/#2500)
+      supports-cdi = lib.versionAtLeast version "25";
     };
 
     meta = with lib; {

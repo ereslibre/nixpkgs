@@ -78,14 +78,6 @@ in
       '';
     };
 
-    enableNvidia = mkOption {
-      type = types.bool;
-      default = false;
-      description = lib.mdDoc ''
-        Enable use of NVidia GPUs from within podman containers.
-      '';
-    };
-
     extraPackages = mkOption {
       type = with types; listOf package;
       default = [ ];
@@ -177,19 +169,10 @@ in
       # containers cannot reach aardvark-dns otherwise
       networking.firewall.interfaces.${network_interface}.allowedUDPPorts = lib.mkIf dns_enabled [ 53 ];
 
-      # Podman implements CDI support with 3.2.0 (https://github.com/containers/podman/blob/v3.2.0/RELEASE_NOTES.md#320)
-      hardware.nvidia-container-toolkit.enable = lib.mkIf
-        (cfg.enableNvidia && (lib.versionAtLeast cfg.package.version "3.2")) true;
-
       virtualisation.containers = {
         enable = true; # Enable common /etc/containers configuration
         containersConf.settings = {
           network.network_backend = "netavark";
-        } // lib.optionalAttrs cfg.enableNvidia {
-          engine = {
-            conmon_env_vars = [ "PATH=${lib.makeBinPath [ pkgs.nvidia-podman ]}" ];
-            runtimes.nvidia = [ "${pkgs.nvidia-podman}/bin/nvidia-container-runtime" ];
-          };
         };
       };
 

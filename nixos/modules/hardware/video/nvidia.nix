@@ -275,7 +275,7 @@ in {
           '';
         };
         systemd.tmpfiles.rules =
-          lib.optional config.virtualisation.docker.enableNvidia
+          lib.optional (config.virtualisation.docker.enableNvidia && !config.virtualisation.docker.package.supports-cdi)
             "L+ /run/nvidia-docker/bin - - - - ${nvidia_x11.bin}/origBin";
         services.udev.extraRules =
         ''
@@ -534,7 +534,7 @@ in {
         hardware.firmware = lib.optional cfg.open nvidia_x11.firmware;
 
         systemd.tmpfiles.rules =
-          lib.optional (nvidia_x11.persistenced != null && config.virtualisation.docker.enableNvidia)
+          lib.optional (nvidia_x11.persistenced != null && config.virtualisation.docker.enableNvidia && !config.virtualisation.docker.package.supports-cdi)
           "L+ /run/nvidia-docker/extras/bin/nvidia-persistenced - - - - ${nvidia_x11.persistenced}/origBin/nvidia-persistenced";
 
         boot = {
@@ -589,7 +589,7 @@ in {
 
         systemd = {
           tmpfiles.rules =
-            lib.optional (nvidia_x11.persistenced != null && config.virtualisation.docker.enableNvidia)
+            lib.optional (nvidia_x11.persistenced != null && config.virtualisation.docker.enableNvidia && !config.virtualisation.docker.package.supports-cdi)
             "L+ /run/nvidia-docker/extras/bin/nvidia-persistenced - - - - ${nvidia_x11.persistenced}/origBin/nvidia-persistenced";
 
           services = lib.mkMerge [
