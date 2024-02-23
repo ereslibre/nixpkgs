@@ -28,7 +28,12 @@
         RemainAfterExit = true;
         ExecStart =
           let
-            script = pkgs.callPackage ./cdi-generate.nix { nvidia-driver = config.hardware.nvidia.package; };
+            script = pkgs.callPackage ./cdi-generate.nix {
+              inherit (config.virtualisation.containers.cdi.dynamic.nvidia)
+                mount-nvidia-binaries
+                mount-nvidia-docker-1-directories;
+              nvidia-driver = config.hardware.nvidia.package;
+            };
           in
           lib.getExe script;
         Type = "oneshot";

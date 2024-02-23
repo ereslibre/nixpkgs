@@ -29,12 +29,30 @@ in
     };
 
     cdi = {
-      dynamic.nvidia.enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = lib.mdDoc ''
-          Enable dynamic CDI configuration for NVidia devices by running nvidia-container-toolkit on boot.
-        '';
+      dynamic.nvidia = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = lib.mdDoc ''
+            Enable dynamic CDI configuration for NVidia devices by running nvidia-container-toolkit on boot.
+          '';
+        };
+
+        mount-nvidia-binaries = mkOption {
+          default = true;
+          type = types.bool;
+          description = lib.mdDoc ''
+            Mount binaries nvidia-smi, nvidia-cuda-mps-control, nvidia-cuda-mps-server, nvidia-debugdump, nvidia-powerd and nvidia-ctk on containers.
+          '';
+        };
+
+        mount-nvidia-docker-1-directories = mkOption {
+          default = true;
+          type = types.bool;
+          description = lib.mdDoc ''
+            Mount nvidia-docker-1 directories on containers: /usr/local/nvidia/lib and /usr/local/nvidia/lib64.
+          '';
+        };
       };
 
       static = mkOption {
