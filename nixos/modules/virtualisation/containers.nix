@@ -28,61 +28,6 @@ in
       description = lib.mdDoc "Enable the OCI seccomp BPF hook";
     };
 
-    cdi = {
-      dynamic.nvidia = {
-        enable = mkOption {
-          type = types.bool;
-          default = false;
-          description = lib.mdDoc ''
-            Enable dynamic CDI configuration for NVidia devices by running nvidia-container-toolkit on boot.
-          '';
-        };
-
-        mount-nvidia-binaries = mkOption {
-          default = true;
-          type = types.bool;
-          description = lib.mdDoc ''
-            Mount binaries nvidia-smi, nvidia-cuda-mps-control, nvidia-cuda-mps-server, nvidia-debugdump, nvidia-powerd and nvidia-ctk on containers.
-          '';
-        };
-
-        mount-nvidia-docker-1-directories = mkOption {
-          default = true;
-          type = types.bool;
-          description = lib.mdDoc ''
-            Mount nvidia-docker-1 directories on containers: /usr/local/nvidia/lib and /usr/local/nvidia/lib64.
-          '';
-        };
-      };
-
-      static = mkOption {
-        type = types.attrs;
-        default = { };
-        description = lib.mdDoc ''
-          Declarative CDI specification. Each key of the attribute set
-          will be mapped to a file in /etc/cdi. It is required for every
-          key to be provided in JSON format.
-        '';
-        example = {
-          some-vendor = builtins.fromJSON ''
-              {
-                "cdiVersion": "0.5.0",
-                "kind": "some-vendor.com/foo",
-                "devices": [],
-                "containerEdits": []
-              }
-            '';
-
-          some-other-vendor = {
-            cdiVersion = "0.5.0";
-            kind = "some-other-vendor.com/bar";
-            devices = [];
-            containerEdits = [];
-          };
-        };
-      };
-    };
-
     containersConf.settings = mkOption {
       type = toml.type;
       default = { };
@@ -167,8 +112,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-
-    hardware.nvidia-container-toolkit-cdi-generator.enable = lib.mkIf cfg.cdi.dynamic.nvidia.enable true;
 
     virtualisation.containers.containersConf.cniPlugins = [ pkgs.cni-plugins ];
 
