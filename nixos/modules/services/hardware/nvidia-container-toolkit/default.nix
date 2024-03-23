@@ -32,10 +32,16 @@
         '';
       };
 
+      mounts = lib.mkOption {
+        type = lib.types.listOf (lib.types.submodule mountType);
+        default = [];
+        description = lib.mdDoc "Mounts to be added to every container under the Nvidia CDI profile.";
+      };
+
       extra-mounts = lib.mkOption {
         type = lib.types.listOf (lib.types.submodule mountType);
         default = [];
-        description = lib.mdDoc "Extra mounts to be added to every container under this CDI profile.";
+        description = lib.mdDoc "Extra mounts to be added to every container under the Nvidia CDI profile.";
       };
 
       mount-nvidia-executables = lib.mkOption {
@@ -62,6 +68,42 @@
 
   config = {
 
+    hardware.nvidia-container-toolkit.mounts = let
+      nvidia-driver = config.hardware.nvidia.package;
+    in (lib.mkMerge [
+      ([{ hostPath = pkgs.addDriverRunpath.driverLink;
+          containerPath = pkgs.addDriverRunpath.driverLink; }])
+      ([{ hostPath = "${lib.getLib pkgs.glibc}/lib";
+          containerPath = "${lib.getLib pkgs.glibc}/lib"; }])
+      ([{ hostPath = "${lib.getLib pkgs.glibc}/lib64";
+          containerPath = "${lib.getLib pkgs.glibc}/lib64"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-executables
+        [{ hostPath = lib.getExe' nvidia-driver "nvidia-cuda-mps-control";
+           containerPath = "/usr/bin/nvidia-cuda-mps-control"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-executables
+        [{ hostPath = lib.getExe' nvidia-driver "nvidia-cuda-mps-server";
+           containerPath = "/usr/bin/nvidia-cuda-mps-server"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-executables
+        [{ hostPath = lib.getExe' nvidia-driver "nvidia-debugdump";
+           containerPath = "/usr/bin/nvidia-debugdump"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-executables
+        [{ hostPath = lib.getExe' nvidia-driver "nvidia-powerd";
+           containerPath = "/usr/bin/nvidia-powerd"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-executables
+        [{ hostPath = lib.getExe' nvidia-driver "nvidia-smi";
+           containerPath = "/usr/bin/nvidia-smi"; }])
+      # nvidia-docker 1.0 uses /usr/local/nvidia/lib{,64}
+      #   e.g.
+      #     - https://gitlab.com/nvidia/container-images/cuda/-/blob/e3ff10eab3a1424fe394899df0e0f8ca5a410f0f/dist/12.3.1/ubi9/base/Dockerfile#L44
+      #     - https://github.com/NVIDIA/nvidia-docker/blob/01d2c9436620d7dde4672e414698afe6da4a282f/src/nvidia/volumes.go#L104-L173
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-docker-1-directories
+        [{ hostPath = "${lib.getLib nvidia-driver}/lib";
+           containerPath = "/usr/local/nvidia/lib"; }])
+      (lib.mkIf config.hardware.nvidia-container-toolkit.mount-nvidia-docker-1-directories
+        [{ hostPath = "${lib.getLib nvidia-driver}/lib";
+           containerPath = "/usr/local/nvidia/lib64"; }])
+    ]);
+
     systemd.services.nvidia-container-toolkit-cdi-generator = lib.mkIf config.hardware.nvidia-container-toolkit.enable {
       description = "Container Device Interface (CDI) for Nvidia generator";
       wantedBy = [ "multi-user.target" ];
@@ -72,7 +114,7 @@
         ExecStart =
           let
             script = pkgs.callPackage ./cdi-generate.nix {
-              inherit (config.hardware.nvidia-container-toolkit) extra-mounts;
+              inherit (config.hardware.nvidia-container-toolkit) mounts extra-mounts;
               nvidia-driver = config.hardware.nvidia.package;
             };
           in

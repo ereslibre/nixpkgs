@@ -1,8 +1,8 @@
 {
-  addDriverRunpath,
   glibc,
   jq,
   lib,
+  mounts,
   extra-mounts,
   nvidia-container-toolkit,
   nvidia-driver,
@@ -14,14 +14,6 @@
     options = (if mountOptions != null then mountOptions else [ "ro" "nosuid" "nodev" "bind" ]);
   };
   jqAddMountExpression = ".containerEdits.mounts[.containerEdits.mounts | length] |= . +";
-  mounts = [
-    { hostPath = addDriverRunpath.driverLink;
-      containerPath = addDriverRunpath.driverLink; }
-    { hostPath = "${lib.getLib glibc}/lib";
-      containerPath = "${lib.getLib glibc}/lib"; }
-    { hostPath = "${lib.getLib glibc}/lib64";
-      containerPath = "${lib.getLib glibc}/lib64"; }
-  ];
   mountsToJq = mounts: (lib.concatMap
     (mount:
       ["${lib.getExe jq} '${jqAddMountExpression} ${builtins.toJSON (mkMount mount)}'"])
