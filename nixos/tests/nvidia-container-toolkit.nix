@@ -33,7 +33,7 @@ import ./make-test-python.nix (
           Cmd = [ "${testCDIScript}/bin/test-cdi" ];
         };
         copyToRoot = (with pkgs; [
-          unfreePkgs.linuxPackages.nvidia_x11
+          # unfreePkgs.linuxPackages.nvidia_x11
         ]) ++ (with pkgs.dockerTools; [
           usrBinEnv
           binSh
