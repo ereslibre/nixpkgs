@@ -1,9 +1,29 @@
 import ./make-test-python.nix (
-  { pkgs, lib, ... }: let
+  { pkgs, lib, system, ... }: let
+      unfreePkgs = import ../.. { inherit system; config.allowUnfree = true; };
       testContainerImage = let
         testCDIScript = pkgs.writeShellScriptBin "test-cdi" ''
-            # If we exit this script with a 0 exit code, the container sandbox was
-            # created successfully.
+            set -e
+
+            # Check referential integrity
+            check_referential_integrity() {
+              echo "Checking referential integrity for $1"
+              ${pkgs.coreutils}/bin/ls -la "$1"
+
+              /usr/bin/nvidia-smi
+
+              ${pkgs.glibc.bin}/bin/ldd "$1" | \
+                ${pkgs.gnugrep}/bin/grep '=>' | \
+                ${pkgs.gnused}/bin/sed "s/.* => //" | \
+                ${pkgs.gnused}/bin/sed "s/ (.*//" | \
+                ${pkgs.findutils}/bin/xargs -I{} ${pkgs.file}/bin/file "{}"
+            }
+
+            export -f check_referential_integrity
+
+            ${pkgs.findutils}/bin/find /usr/bin -type f | \
+              ${pkgs.findutils}/bin/xargs -I{} ${pkgs.runtimeShell} -c 'check_referential_integrity "{}"'
+
             exit 0
           '';
       in pkgs.dockerTools.buildImage {
@@ -12,6 +32,12 @@ import ./make-test-python.nix (
         config = {
           Cmd = [ "${testCDIScript}/bin/test-cdi" ];
         };
+        copyToRoot = (with pkgs; [
+          unfreePkgs.linuxPackages.nvidia_x11
+        ]) ++ (with pkgs.dockerTools; [
+          usrBinEnv
+          binSh
+        ]);
       };
     in {
     name = "nvidia-container-toolkit";
@@ -54,7 +80,8 @@ import ./make-test-python.nix (
           CDI_DOCUMENT
         '';
       in {
-        environment.systemPackages = with pkgs; [ jq linuxPackages.nvidia_x11 podman ];
+        virtualisation.diskSize = 10240;
+        environment.systemPackages = with pkgs; [ jq podman ];
         hardware = {
           nvidia-container-toolkit = {
             enable = true;
@@ -87,9 +114,9 @@ import ./make-test-python.nix (
 
       with subtest("Generate the CDI spec for a machine with an Nvidia GPU"):
         nvidia_one_gpu.wait_for_unit("nvidia-container-toolkit-cdi-generator.service")
-        print(nvidia_one_gpu.succeed("cat /var/run/cdi/nvidia-container-toolkit.json | jq"))
+        nvidia_one_gpu.succeed("cat /var/run/cdi/nvidia-container-toolkit.json | jq")
         nvidia_one_gpu.succeed("podman load < ${testContainerImage}")
-        nvidia_one_gpu.succeed("podman run --pull=never --device=nvidia.com/gpu=all cdi-test:latest")
+        print(nvidia_one_gpu.succeed("podman run --pull=never --device=nvidia.com/gpu=all cdi-test:latest"))
     '';
   }
 )
