@@ -3,26 +3,39 @@ import ./make-test-python.nix (
       unfreePkgs = import ../.. { inherit system; config.allowUnfree = true; };
       testContainerImage = let
         testCDIScript = pkgs.writeShellScriptBin "test-cdi" ''
-            set -e
-
             # Check referential integrity
             check_referential_integrity() {
-              echo "Checking referential integrity for $1"
-              ${pkgs.coreutils}/bin/ls -la "$1"
+              echo "Checking referential integrity: $1"
 
-              /usr/bin/nvidia-smi
-
-              ${pkgs.glibc.bin}/bin/ldd "$1" | \
+              filepath="$1"
+              files=$( \
+                ${pkgs.glibc.bin}/bin/ldd "$filepath" | \
                 ${pkgs.gnugrep}/bin/grep '=>' | \
                 ${pkgs.gnused}/bin/sed "s/.* => //" | \
-                ${pkgs.gnused}/bin/sed "s/ (.*//" | \
-                ${pkgs.findutils}/bin/xargs -I{} ${pkgs.file}/bin/file "{}"
+                ${pkgs.gnused}/bin/sed "s/ (.*//" \
+              ) || exit 1
+
+              for file in $files; do
+                echo "Checking that $file is inside the container filesystem"
+                ${pkgs.file}/bin/file -E "$file-meh" || exit 1
+              done
+
+              exit 0
             }
 
             export -f check_referential_integrity
 
-            ${pkgs.findutils}/bin/find /usr/bin -type f | \
-              ${pkgs.findutils}/bin/xargs -I{} ${pkgs.runtimeShell} -c 'check_referential_integrity "{}"'
+            check_directory_referential_integrity() {
+              echo "checking referential integrity for files $1"
+              for file in $(${pkgs.findutils}/bin/find $1 -type f); do
+                check_referential_integrity "$file" || exit 1
+              done
+            }
+
+
+            check_directory_referential_integrity "/usr/bin"
+            check_directory_referential_integrity "${pkgs.addDriverRunpath.driverLink}"
+            check_directory_referential_integrity "/usr/local/nvidia"
 
             exit 0
           '';
@@ -31,10 +44,11 @@ import ./make-test-python.nix (
         tag = "latest";
         config = {
           Cmd = [ "${testCDIScript}/bin/test-cdi" ];
+          Env = [
+            "LD_LIBRARY_PATH=${unfreePkgs.linuxPackages.nvidia_x11}/lib"
+          ];
         };
-        copyToRoot = (with pkgs; [
-          # unfreePkgs.linuxPackages.nvidia_x11
-        ]) ++ (with pkgs.dockerTools; [
+        copyToRoot = (with pkgs.dockerTools; [
           usrBinEnv
           binSh
         ]);
