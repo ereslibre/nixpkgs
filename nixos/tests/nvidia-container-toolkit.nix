@@ -1,34 +1,34 @@
 import ./make-test-python.nix (
   { pkgs, lib, system, ... }: let
-      unfreePkgs = import ../.. { inherit system; config.allowUnfree = true; };
+    unfreeAndInsecurePkgs = import ../.. {
+      inherit system;
+      config = {
+        allowUnfree = true;
+        permittedInsecurePackages = [ "openssl-1.1.1w" ];
+      };
+    };
       testContainerImage = let
         testCDIScript = pkgs.writeShellScriptBin "test-cdi" ''
             check_file_referential_integrity() {
-              echo "checking file $1 referential integrity"
-
               filepath="$1"
               files=$( \
                 ${pkgs.glibc.bin}/bin/ldd "$filepath" | \
-                ${pkgs.coreutils}/bin/tee /dev/stderr | \
+                ${pkgs.gnugrep}/bin/grep -v "not found" | \
                 ${pkgs.gnugrep}/bin/grep '=>' | \
                 ${pkgs.gnused}/bin/sed "s/.* => //" | \
                 ${pkgs.gnused}/bin/sed "s/ (.*//" \
               ) || exit 1
 
               for file in $files; do
-                echo "Checking that $file is inside the container filesystem"
-                ${pkgs.file}/bin/file -E "$file" || exit 1
+                ${pkgs.file}/bin/file -E "$file" &> /dev/null || exit 1
               done
             }
 
             check_directory_referential_integrity() {
-              echo "checking directory $1 referential integrity"
-              ${pkgs.tree}/bin/tree $1 || exit 1
               for file in $(${pkgs.findutils}/bin/find $1 -type f); do
-                check_file_referential_integrity "$file" || exit 1
+                check_file_referential_integrity "$file" &> /dev/null || exit 1
               done
             }
-
             check_directory_referential_integrity "/usr/bin"
             check_directory_referential_integrity "${pkgs.addDriverRunpath.driverLink}"
             check_directory_referential_integrity "/usr/local/nvidia"
@@ -39,10 +39,10 @@ import ./make-test-python.nix (
         config = {
           Cmd = [ "${testCDIScript}/bin/test-cdi" ];
           Env = [
-            "LD_LIBRARY_PATH=${unfreePkgs.linuxPackages.nvidia_x11}/lib:${lib.getLib pkgs.openssl}/lib"
+            "LD_LIBRARY_PATH=${unfreeAndInsecurePkgs.linuxPackages.nvidia_x11}/lib:${lib.getLib unfreeAndInsecurePkgs.openssl_1_1}/lib"
           ];
         };
-        copyToRoot = (with pkgs; [ openssl ]) ++ (with pkgs.dockerTools; [
+        copyToRoot = (with pkgs.dockerTools; [
           usrBinEnv
           binSh
         ]);
@@ -124,7 +124,7 @@ import ./make-test-python.nix (
         nvidia_one_gpu.wait_for_unit("nvidia-container-toolkit-cdi-generator.service")
         nvidia_one_gpu.succeed("cat /var/run/cdi/nvidia-container-toolkit.json | jq")
         nvidia_one_gpu.succeed("podman load < ${testContainerImage}")
-        print(nvidia_one_gpu.succeed("podman run --pull=never --device=nvidia.com/gpu=all -v /run/opengl-driver:/run/opengl-driver:ro -v ${lib.getLib pkgs.openssl}/lib:${lib.getLib pkgs.openssl}/lib:ro cdi-test:latest"))
+        print(nvidia_one_gpu.succeed("podman run --pull=never --device=nvidia.com/gpu=all -v /run/opengl-driver:/run/opengl-driver:ro cdi-test:latest"))
     '';
   }
 )
