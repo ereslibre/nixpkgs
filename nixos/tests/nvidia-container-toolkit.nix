@@ -9,29 +9,39 @@ import ./make-test-python.nix (
     };
       testContainerImage = let
         testCDIScript = pkgs.writeShellScriptBin "test-cdi" ''
+            die() {
+              echo "$1"
+              exit 1
+            }
+
             check_file_referential_integrity() {
-              filepath="$1"
-              files=$( \
-                ${pkgs.glibc.bin}/bin/ldd "$filepath" | \
-                ${pkgs.gnugrep}/bin/grep -v "not found" | \
-                ${pkgs.gnugrep}/bin/grep '=>' | \
-                ${pkgs.gnused}/bin/sed "s/.* => //" | \
-                ${pkgs.gnused}/bin/sed "s/ (.*//" \
-              ) || exit 1
+              echo "checking $file referential integrity"
+              files=$(set -o pipefail && \
+                      ${pkgs.glibc.bin}/bin/ldd "$1" | \
+                      ${pkgs.gnugrep}/bin/grep '=>' | \
+                      ${pkgs.gnused}/bin/sed "s/.* => //" | \
+                      ${pkgs.gnused}/bin/sed "s/ (.*//") || exit 1
 
               for file in $files; do
-                ${pkgs.file}/bin/file -E "$file" &> /dev/null || exit 1
+                if [ ! -f "$file" ]; then
+                  die "$file does not exist in the container filesystem"
+                fi
               done
             }
 
             check_directory_referential_integrity() {
-              for file in $(${pkgs.findutils}/bin/find $1 -type f); do
-                check_file_referential_integrity "$file" &> /dev/null || exit 1
+              ${pkgs.findutils}/bin/find "$1" -type f -print0 | while read -d $'\0' file; do
+                if [[ $(${pkgs.file}/bin/file "$file" | ${pkgs.gnugrep}/bin/grep ELF) ]]; then
+                  check_file_referential_integrity "$file" || exit 1
+                else
+                  echo "skipping $file"
+                fi
               done
             }
-            check_directory_referential_integrity "/usr/bin"
-            check_directory_referential_integrity "${pkgs.addDriverRunpath.driverLink}"
-            check_directory_referential_integrity "/usr/local/nvidia"
+
+            check_directory_referential_integrity "/usr/bin" || exit 1
+            check_directory_referential_integrity "${pkgs.addDriverRunpath.driverLink}" || exit 1
+            check_directory_referential_integrity "/usr/local/nvidia" || exit 1
           '';
       in pkgs.dockerTools.buildImage {
         name = "cdi-test";
