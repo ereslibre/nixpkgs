@@ -25,9 +25,9 @@ import ./make-test-python.nix (
             echo "checking $file referential integrity"
             files=$(set -o pipefail && \
                     ${pkgs.glibc.bin}/bin/ldd "$1" | \
-                    ${pkgs.gnugrep}/bin/grep '=>' | \
-                    ${pkgs.gnused}/bin/sed "s/.* => //" | \
-                    ${pkgs.gnused}/bin/sed "s/ (.*//") || exit 1
+                    ${lib.getExe pkgs.gnugrep} '=>' | \
+                    ${lib.getExe pkgs.gnused} "s/.* => //" | \
+                    ${lib.getExe pkgs.gnused} "s/ (.*//") || exit 1
 
             for file in $files; do
               if [ ! -f "$file" ]; then
@@ -37,8 +37,8 @@ import ./make-test-python.nix (
           }
 
           check_directory_referential_integrity() {
-            ${pkgs.findutils}/bin/find "$1" -type f -print0 | while read -d $'\0' file; do
-              if [[ $(${pkgs.file}/bin/file "$file" | ${pkgs.gnugrep}/bin/grep ELF) ]]; then
+            ${lib.getExe pkgs.findutils} "$1" -type f -print0 | while read -d $'\0' file; do
+              if [[ $(${lib.getExe pkgs.file} "$file" | ${lib.getExe pkgs.gnugrep} ELF) ]]; then
                 check_file_referential_integrity "$file" || exit 1
               else
                 echo "skipping $file"
@@ -124,7 +124,8 @@ import ./make-test-python.nix (
               package = pkgs.stdenv.mkDerivation {
                 name = "nvidia-ctk-dummy";
                 version = "1.0.0";
-                phases = "installPhase";
+                dontUnpack = true;
+                dontBuild = true;
                 installPhase = ''
                   mkdir -p $out/bin
                   cat <<EOF > $out/bin/nvidia-ctk
