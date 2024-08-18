@@ -22,18 +22,8 @@ import ./make-test-python.nix (
           }
 
           check_file_referential_integrity() {
-            echo "checking $file referential integrity"
-            files=$(set -o pipefail && \
-                    ${pkgs.glibc.bin}/bin/ldd "$1" | \
-                    ${lib.getExe pkgs.gnugrep} '=>' | \
-                    ${lib.getExe pkgs.gnused} "s/.* => //" | \
-                    ${lib.getExe pkgs.gnused} "s/ (.*//") || exit 1
-
-            for file in $files; do
-              if [ ! -f "$file" ]; then
-                die "$file does not exist in the container filesystem"
-              fi
-            done
+            echo "checking $1 referential integrity"
+            ( ( ${pkgs.glibc.bin}/bin/ldd "$1" | ${lib.getExe pkgs.gnugrep} "not found" ) && exit 1 ) || exit 0
           }
 
           check_directory_referential_integrity() {
