@@ -23,7 +23,8 @@ import ./make-test-python.nix (
 
           check_file_referential_integrity() {
             echo "checking $1 referential integrity"
-            ( ( ${pkgs.glibc.bin}/bin/ldd "$1" | ${lib.getExe pkgs.gnugrep} "not found" ) && exit 1 ) || exit 0
+            ( ${pkgs.glibc.bin}/bin/ldd "$1" | ${lib.getExe pkgs.gnugrep} "not found" &> /dev/null ) && return 1
+            return 0
           }
 
           check_directory_referential_integrity() {
