@@ -59,6 +59,50 @@ import ./make-test-python.nix (
           ]
         );
       };
+    emptyCDISpec = ''
+      #! ${pkgs.runtimeShell}
+      cat <<CDI_DOCUMENT
+        {
+          "cdiVersion": "0.5.0",
+          "kind": "nvidia.com/gpu",
+          "devices": [
+            {
+              "name": "all",
+              "containerEdits": {
+                "deviceNodes": [
+                  {
+                    "path": "/dev/urandom"
+                  }
+                ],
+                "hooks": [],
+                "mounts": []
+              }
+            }
+          ],
+          "containerEdits": {
+            "deviceNodes": [],
+            "hooks": [],
+            "mounts": []
+          }
+        }
+      CDI_DOCUMENT
+    '';
+    nvidia-container-toolkit = {
+      enable = true;
+      package = pkgs.stdenv.mkDerivation {
+        name = "nvidia-ctk-dummy";
+        version = "1.0.0";
+        dontUnpack = true;
+        dontBuild = true;
+        installPhase = ''
+          mkdir -p $out/bin
+          cat <<EOF > $out/bin/nvidia-ctk
+            ${emptyCDISpec}
+          EOF
+          chmod +x $out/bin/nvidia-ctk
+        '';
+      };
+    };
   in
   {
     name = "nvidia-container-toolkit";
@@ -66,71 +110,35 @@ import ./make-test-python.nix (
       maintainers = [ ereslibre ];
     };
     nodes = {
-      no-nvidia-gpus = {
+      no-nvidia-gpus = { config, ... }: {
         environment.systemPackages = with pkgs; [ jq ];
-        hardware.nvidia-container-toolkit.enable = true;
+        hardware = {
+          inherit nvidia-container-toolkit;
+          nvidia = {
+            open = true;
+            package = config.boot.kernelPackages.nvidiaPackages.stable;
+          };
+        };
         nixpkgs.config.allowUnfree = true;
       };
       nvidia-one-gpu =
-        { pkgs, ... }:
-        let
-          emptyCDISpec = ''
-            #! ${pkgs.runtimeShell}
-            cat <<CDI_DOCUMENT
-              {
-                "cdiVersion": "0.5.0",
-                "kind": "nvidia.com/gpu",
-                "devices": [
-                  {
-                    "name": "all",
-                    "containerEdits": {
-                      "deviceNodes": [
-                        {
-                          "path": "/dev/urandom"
-                        }
-                      ],
-                      "hooks": [],
-                      "mounts": []
-                    }
-                  }
-                ],
-                "containerEdits": {
-                  "deviceNodes": [],
-                  "hooks": [],
-                  "mounts": []
-                }
-              }
-            CDI_DOCUMENT
-          '';
-        in
-        {
+        { config, pkgs, ... }: {
           virtualisation.diskSize = 10240;
           environment.systemPackages = with pkgs; [
             jq
             podman
           ];
           hardware = {
-            nvidia-container-toolkit = {
-              enable = true;
-              package = pkgs.stdenv.mkDerivation {
-                name = "nvidia-ctk-dummy";
-                version = "1.0.0";
-                dontUnpack = true;
-                dontBuild = true;
-                installPhase = ''
-                  mkdir -p $out/bin
-                  cat <<EOF > $out/bin/nvidia-ctk
-                    ${emptyCDISpec}
-                  EOF
-                  chmod +x $out/bin/nvidia-ctk
-                '';
-              };
+            inherit nvidia-container-toolkit;
+            nvidia = {
+              open = true;
+              package = config.boot.kernelPackages.nvidiaPackages.stable;
             };
             opengl.enable = true;
           };
-          nixpkgs.config.allowUnfree = true;
           services.xserver.videoDrivers = [ "nvidia" ];
           virtualisation.containers.enable = true;
+          nixpkgs.config.allowUnfree = true;
         };
     };
     testScript = ''
