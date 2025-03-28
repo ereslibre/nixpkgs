@@ -2159,10 +2159,6 @@ with pkgs;
     espanso = espanso-wayland;
   };
 
-  fastly = callPackage ../misc/fastly {
-    # If buildGoModule is overridden, provide a matching version of the go attribute
-  };
-
   f3d = callPackage ../applications/graphics/f3d {
     inherit (darwin.apple_sdk.frameworks) Cocoa OpenGL;
   };
