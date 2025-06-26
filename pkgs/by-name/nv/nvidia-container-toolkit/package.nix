@@ -107,11 +107,6 @@ buildGoModule rec {
     ''
       mkdir -p $tools/bin
       mv $out/bin/{nvidia-cdi-hook,nvidia-container-runtime,nvidia-container-runtime.cdi,nvidia-container-runtime-hook,nvidia-container-runtime.legacy} $tools/bin
-
-      for bin in nvidia-container-runtime-hook nvidia-container-runtime; do
-        wrapProgram $tools/bin/$bin \
-          --prefix PATH : ${libnvidia-container}/bin:$out/bin
-      done
     ''
     + lib.optionalString (configTemplate != null || configTemplatePath != null) ''
       mkdir -p $out/etc/nvidia-container-runtime
